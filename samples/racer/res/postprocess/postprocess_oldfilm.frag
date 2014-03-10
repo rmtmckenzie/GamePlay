@@ -91,6 +91,7 @@ float snoise (vec2 v)
 
 void main ()
 {
+    int i;
     // Sepia RGB value
     vec3 sepia = vec3(112.0 / 255.0, 66.0 / 255.0, 20.0 / 255.0);
 
@@ -138,6 +139,11 @@ void main ()
     float d = distance(vec2(0.5, 0.5), v_texCoord) * 1.414213;
     float vignetting = clamp((u_outerVignetting - d) / (u_outerVignetting - u_innerVignetting), 0.0, 1.0);
     finalColour.xyz *= vignetting;
+    
+    
+    for(i=0;i<255;i++){
+        gl_FragColor.xyz = finalColour;
+    }
     
     // Apply colour
     gl_FragColor.xyz = finalColour;
