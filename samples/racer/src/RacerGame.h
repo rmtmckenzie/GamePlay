@@ -133,6 +133,11 @@ private:
     AudioSource* _backgroundSound;
     AudioSource* _engineSound;
     AudioSource* _brakingSound;
+    
+    FrameBuffer* _ppFrameBuffer;
+    Model* _ppQuadModel;
+    Material* _ppMaterial;
+    
 };
 
 #endif

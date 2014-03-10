@@ -39,7 +39,27 @@ RacerGame::RacerGame()
 void RacerGame::initialize()
 {
     setMultiTouch(true);
+    
+    _frameBuffer = FrameBuffer::create("PostProcess",Game::getInstance()->getWidth(),Game::getInstance()->getHeight());
+    DepthStencilTarget *dst = DepthStencilTarget::create("PostProcess",DepthStencilTarget::DEPTH_STENCIL,
+                                                         Game::getInstance()->getWidth(),Game::getInstance()->getHeight());
 
+    _frameBuffer->setDepthStencilTarget(dst);
+    SAFE_RELEASE(dst);
+    
+    _ppMaterial = Material::create("/res/common/postprocess.material");
+    Texture::Sampler* sampler = Texture::Sampler::create(_frameBuffer->getRenderTarget()->getTexture());
+    _ppMaterial->getParameter("u_texture")->setValue(sampler);
+    _ppMaterial->getParameter("u_sepiaValue")->setValue(0.8f);
+    _ppMaterial->getParameter("u_noiseValue")->setValue(0.4f);
+    _ppMaterial->getParameter("u_scratchValue")->setValue(0.4f);
+    _ppMaterial->getParameter("u_innerVignetting")->setValue(0.9f);
+    _ppMaterial->getParameter("u_outerVignetting")->setValue(0.9f);
+    SAFE_RELEASE(sampler);
+    
+    Mesh* mesh = Mesh::createQuadFullscreen();
+    
+    
     _font = Font::create("res/ui/arial.gpb");
 
     // Display the gameplay splash screen during loading, for at least 1 second.
@@ -135,6 +155,10 @@ void RacerGame::finalize()
     SAFE_RELEASE(_font);
     SAFE_RELEASE(_menu);
     SAFE_RELEASE(_overlay);
+    
+    SAFE_RELEASE(_ppMaterial);
+    SAFE_RELEASE(_ppFrameBuffer);
+    SAFE_RELEASE(_ppQuadModel);
 }
 
 void RacerGame::update(float elapsedTime)
@@ -156,6 +180,14 @@ void RacerGame::update(float elapsedTime)
         __menuFlag = true;
         menuEvent();
     }
+    
+    MaterialParameter* elapsedParam = _ppMaterial->getParameter("u_elapsedTime");
+    if(elapsedParam)
+        elapsedParam->setValue(elapsedTime);
+    MaterialParameter* randomParam = _ppMaterial->getParameter("u_random");
+    if(randomParam)
+        randomParam->setValue(MATH_RANDOM_0_1());
+    
 
     Node* cameraNode;
     if (_scene->getActiveCamera() && (cameraNode = _scene->getActiveCamera()->getNode()))
@@ -298,6 +330,11 @@ bool RacerGame::isUpset() const
 
 void RacerGame::render(float elapsedTime)
 {
+    Rectangle defaultViewport = Game::getInstance()->getViewport();
+    
+    Game::getInstance()->setViewport(Rectangle(Game::getInstance()->getWidth(),Game::getInstance()->getHeight()));
+    FrameBuffer* previousFrameBuffer = _ppFrameBuffer->bind();
+    
     // Clear the color and depth buffers
     clear(CLEAR_COLOR_DEPTH, Vector4::zero(), 1.0f, 0);
 
@@ -305,7 +342,7 @@ void RacerGame::render(float elapsedTime)
     for (unsigned int i = 0; i < QUEUE_COUNT; ++i)
         _renderQueues[i].clear();
     _scene->visit(this, &RacerGame::buildRenderQueues);
-
+    
     // Draw the scene from our render queues
     drawScene();
 
@@ -313,6 +350,9 @@ void RacerGame::render(float elapsedTime)
     {
         Game::getInstance()->getPhysicsController()->drawDebug(_scene->getActiveCamera()->getViewProjectionMatrix());
     }
+    
+    
+    
 
     // Draw the gamepad
     if (_gamepad && _gamepad->isVirtual())
