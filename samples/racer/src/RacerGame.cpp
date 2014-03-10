@@ -40,15 +40,15 @@ void RacerGame::initialize()
 {
     setMultiTouch(true);
     
-    _frameBuffer = FrameBuffer::create("PostProcess",Game::getInstance()->getWidth(),Game::getInstance()->getHeight());
+    _ppFrameBuffer = FrameBuffer::create("PostProcess",Game::getInstance()->getWidth(),Game::getInstance()->getHeight());
     DepthStencilTarget *dst = DepthStencilTarget::create("PostProcess",DepthStencilTarget::DEPTH_STENCIL,
                                                          Game::getInstance()->getWidth(),Game::getInstance()->getHeight());
 
-    _frameBuffer->setDepthStencilTarget(dst);
+    _ppFrameBuffer->setDepthStencilTarget(dst);
     SAFE_RELEASE(dst);
     
-    _ppMaterial = Material::create("/res/common/postprocess.material");
-    Texture::Sampler* sampler = Texture::Sampler::create(_frameBuffer->getRenderTarget()->getTexture());
+    _ppMaterial = Material::create("res/postprocess/postprocess.material");
+    Texture::Sampler* sampler = Texture::Sampler::create(_ppFrameBuffer->getRenderTarget()->getTexture());
     _ppMaterial->getParameter("u_texture")->setValue(sampler);
     _ppMaterial->getParameter("u_sepiaValue")->setValue(0.8f);
     _ppMaterial->getParameter("u_noiseValue")->setValue(0.4f);
@@ -58,12 +58,15 @@ void RacerGame::initialize()
     SAFE_RELEASE(sampler);
     
     Mesh* mesh = Mesh::createQuadFullscreen();
-    
+    _ppQuadModel = Model::create(mesh);
+    _ppQuadModel->setMaterial(_ppMaterial);
+    _ppMaterial->setTechnique("Old Film");
+    SAFE_RELEASE(mesh);
     
     _font = Font::create("res/ui/arial.gpb");
 
     // Display the gameplay splash screen during loading, for at least 1 second.
-    displayScreen(this, &RacerGame::drawSplash, NULL, 1000L);
+    //displayScreen(this, &RacerGame::drawSplash, NULL, 1000L);
 
     // Create the menu and start listening to its controls.
     _menu = Form::create("res/common/menu.form");
@@ -351,7 +354,15 @@ void RacerGame::render(float elapsedTime)
         Game::getInstance()->getPhysicsController()->drawDebug(_scene->getActiveCamera()->getViewProjectionMatrix());
     }
     
+    Game::getInstance()->setViewport(defaultViewport);
     
+    previousFrameBuffer->bind();
+    
+    Game::getInstance()->clear(CLEAR_COLOR,Vector4(0,0,0,1),1.0f,0);
+    //BLIT
+    _ppQuadModel->draw();
+    
+    previousFrameBuffer->bind();
     
 
     // Draw the gamepad
