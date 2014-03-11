@@ -32,7 +32,7 @@ RacerGame game;
 
 RacerGame::RacerGame()
     : _scene(NULL), _keyFlags(0), _mouseFlags(0), _steering(0), _gamepad(NULL), _carVehicle(NULL), _upsetTimer(0),
-      _backgroundSound(NULL), _engineSound(NULL), _brakingSound(NULL)
+      _backgroundSound(NULL), _engineSound(NULL), _brakingSound(NULL), _doCompositing(false)
 {
 }
 
@@ -66,13 +66,14 @@ void RacerGame::initialize()
     _font = Font::create("res/ui/arial.gpb");
 
     // Display the gameplay splash screen during loading, for at least 1 second.
-    //displayScreen(this, &RacerGame::drawSplash, NULL, 1000L);
+    displayScreen(this, &RacerGame::drawSplash, NULL, 1000L);
 
     // Create the menu and start listening to its controls.
     _menu = Form::create("res/common/menu.form");
     _menu->setEnabled(false);
     static_cast<Button*>(_menu->getControl("newGameButton"))->addListener(this, Listener::CLICK);
     static_cast<Button*>(_menu->getControl("quitGameButton"))->addListener(this, Listener::CLICK);
+    static_cast<CheckBox*>(_menu->getControl("useCompositing"))->addListener(this, Listener::VALUE_CHANGED);
     static_cast<RadioButton*>(_menu->getControl("useGamepad"))->addListener(this, Listener::VALUE_CHANGED);
     static_cast<RadioButton*>(_menu->getControl("useTilt"))->addListener(this, Listener::VALUE_CHANGED);
     if (!canExit())
@@ -333,11 +334,15 @@ bool RacerGame::isUpset() const
 
 void RacerGame::render(float elapsedTime)
 {
-    Rectangle defaultViewport = Game::getInstance()->getViewport();
+    Rectangle defaultViewport;
+    FrameBuffer* previousFrameBuffer;
+    if(_doCompositing)
+    {
+        defaultViewport = Game::getInstance()->getViewport();
     
-    Game::getInstance()->setViewport(Rectangle(Game::getInstance()->getWidth(),Game::getInstance()->getHeight()));
-    FrameBuffer* previousFrameBuffer = _ppFrameBuffer->bind();
-    
+        Game::getInstance()->setViewport(Rectangle(Game::getInstance()->getWidth(),Game::getInstance()->getHeight()));
+        previousFrameBuffer = _ppFrameBuffer->bind();
+    }
     // Clear the color and depth buffers
     clear(CLEAR_COLOR_DEPTH, Vector4::zero(), 1.0f, 0);
 
@@ -354,16 +359,19 @@ void RacerGame::render(float elapsedTime)
         Game::getInstance()->getPhysicsController()->drawDebug(_scene->getActiveCamera()->getViewProjectionMatrix());
     }
     
-    Game::getInstance()->setViewport(defaultViewport);
     
-    previousFrameBuffer->bind();
+    if(_doCompositing)
+    {
+        Game::getInstance()->setViewport(defaultViewport);
     
-    Game::getInstance()->clear(CLEAR_COLOR,Vector4(0,0,0,1),1.0f,0);
-    //BLIT
-    _ppQuadModel->draw();
+        previousFrameBuffer->bind();
     
-    previousFrameBuffer->bind();
+        Game::getInstance()->clear(CLEAR_COLOR,Vector4(0,0,0,1),1.0f,0);
+        //BLIT
+        _ppQuadModel->draw();
     
+        previousFrameBuffer->bind();
+    }
 
     // Draw the gamepad
     if (_gamepad && _gamepad->isVirtual())
@@ -682,6 +690,10 @@ void RacerGame::controlEvent(Control* control, EventType evt)
         resetToStart();
         // Close the menu and resume the game.
         menuEvent();
+    }
+    if (strcmp(control->getId(),"useCompositing") == 0)
+    {
+        _doCompositing = !_doCompositing;
     }
     else if (strcmp(control->getId(), "quitGameButton") == 0)
     {

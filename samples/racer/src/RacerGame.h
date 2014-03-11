@@ -137,6 +137,7 @@ private:
     FrameBuffer* _ppFrameBuffer;
     Model* _ppQuadModel;
     Material* _ppMaterial;
+    bool _doCompositing;
     
 };
 

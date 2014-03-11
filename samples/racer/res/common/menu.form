@@ -30,17 +30,25 @@ form pauseMenu
             selected = false
         }
     }
+    
+    checkBox useCompositing
+    {
+        position = 0, 80
+        width = 150
+        selected = false
+        text = Comp
+    }
 
     button newGameButton
     {
-        position = 0, 90
+        position = 0, 130
         size = 150, 50
         text = New Game
     }
 
     button quitGameButton : newGameButton
     {
-        position = 150, 90
+        position = 150, 130
         text = Quit Game
     }
 }
